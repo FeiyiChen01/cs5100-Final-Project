@@ -1,5 +1,7 @@
 from __future__ import annotations
+
 from typing import List, Optional
+
 from game_state import GameState, Move, Position
 
 
@@ -62,9 +64,9 @@ def generate_pawn_moves(state: GameState, pos: Position, side: str) -> List[
   candidates: List[Position] = []
 
   if side == "red":
-    # Red moves upward
+    # Red pawn moves upward
     candidates.append((r - 1, c))
-    # After crossing the river, red pawn can move left or right
+    # After crossing the river, it may also move horizontally
     if r <= 4:
       candidates.append((r, c - 1))
       candidates.append((r, c + 1))
@@ -107,16 +109,43 @@ def kings_facing(state: GameState) -> bool:
   return True
 
 
+def pawn_attacks_square(pawn_pos: Position, pawn_side: str,
+    target: Position) -> bool:
+  """
+  Return True if a pawn on pawn_pos attacks target.
+  """
+  r, c = pawn_pos
+  attack_squares: List[Position] = []
+
+  if pawn_side == "red":
+    attack_squares.append((r - 1, c))
+    if r <= 4:
+      attack_squares.append((r, c - 1))
+      attack_squares.append((r, c + 1))
+  else:
+    attack_squares.append((r + 1, c))
+    if r >= 5:
+      attack_squares.append((r, c - 1))
+      attack_squares.append((r, c + 1))
+
+  return target in attack_squares
+
+
 def is_in_check(state: GameState, side: str) -> bool:
+  """
+  Return True if the given side's king is currently in check.
+  """
   king_pos = state.find_piece(side, "K")
   if king_pos is None:
     return True
 
   opponent = "black" if side == "red" else "red"
 
+  # Illegal king-facing position counts as check
   if kings_facing(state):
     return True
 
+  # Check by opponent rook
   rook_pos = state.find_piece(opponent, "R")
   if rook_pos is not None:
     kr, kc = king_pos
@@ -142,6 +171,11 @@ def is_in_check(state: GameState, side: str) -> bool:
       if not blocked:
         return True
 
+  # Check by opponent pawn
+  pawn_pos = state.find_piece(opponent, "P")
+  if pawn_pos is not None and pawn_attacks_square(pawn_pos, opponent, king_pos):
+    return True
+
   return False
 
 
@@ -160,6 +194,10 @@ def generate_pseudo_legal_moves(state: GameState, side: str) -> List[Move]:
 
 
 def generate_legal_moves(state: GameState, side: str) -> List[Move]:
+  """
+  Generate all legal moves for the given side.
+  A legal move must not leave that side in check.
+  """
   legal_moves: List[Move] = []
 
   for move in generate_pseudo_legal_moves(state, side):
@@ -181,9 +219,9 @@ def winner(state: GameState) -> Optional[str]:
     return "black"
 
   side = state.turn
-  legal = generate_legal_moves(state, side)
+  legal_moves = generate_legal_moves(state, side)
 
-  if not legal:
+  if not legal_moves:
     if is_in_check(state, side):
       return "black" if side == "red" else "red"
     return "draw"
