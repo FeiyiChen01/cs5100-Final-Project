@@ -6,6 +6,7 @@ from board import display_board
 from game_state import GameState, Move
 from minimax import minimax
 from move_generator import generate_legal_moves, winner
+from random_endgame import random_endgame_state
 
 
 def parse_move(text: str) -> Move:
@@ -22,13 +23,21 @@ def move_to_string(move: Move) -> str:
   return f"({r1}, {c1}) -> ({r2}, {c2})"
 
 
-def play_cli() -> None:
-  state = GameState.initial()
+def play_cli(use_random: bool = False) -> None:
+  if use_random:
+    state = random_endgame_state()
+  else:
+    state = GameState.initial()
+
   search_depth = 4
 
   print("Simplified Xiangqi Endgame: Red (AI) vs Black (You)")
   print("You control the Black King.")
   print("Enter moves as: r1 c1 r2 c2")
+  if use_random:
+    print("Random endgame mode enabled.")
+  else:
+    print("Default initial endgame mode.")
   print()
 
   while True:
@@ -70,5 +79,20 @@ def play_cli() -> None:
       state = state.move_piece(move)
 
 
+def main() -> None:
+  print("Choose a mode:")
+  print("1. Default endgame")
+  print("2. Random endgame")
+
+  choice = input("Enter 1 or 2: ").strip()
+
+  if choice == "1":
+    play_cli(use_random=False)
+  elif choice == "2":
+    play_cli(use_random=True)
+  else:
+    print("Invalid choice.")
+
+
 if __name__ == "__main__":
-  play_cli()
+  main()
