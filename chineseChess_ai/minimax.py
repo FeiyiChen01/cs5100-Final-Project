@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from math import inf
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 from evaluation import evaluate
 from game_state import GameState, Move
@@ -11,35 +11,38 @@ from move_generator import generate_legal_moves, winner
 def move_ordering_score(state: GameState, move: Move) -> int:
     score = 0
 
-    from_row, from_col = move[0]
-    to_row, to_col = move[1]
-
-    moving_piece = state.get_piece(from_row, from_col)
-    target_piece = state.get_piece(to_row, to_col)
+    from_pos, to_pos = move
+    moving_piece = state.piece_at(from_pos)
+    target_piece = state.piece_at(to_pos)
 
     if target_piece is not None:
         score += 1000
 
     next_state = state.move_piece(move)
-    score += evaluate(next_state)
+    next_score = evaluate(next_state)
 
-    # Small bonus for advancing the pawn
-    if moving_piece is not None:
-        side, piece_type = moving_piece
-        if side == "red" and piece_type == "P":
+    # Red wants larger evaluation, black wants smaller evaluation
+    if state.turn == "red":
+        score += next_score
+    else:
+        score -= next_score
+
+    # Small bonus for pawn advancement
+    if moving_piece is not None and moving_piece.kind == "P":
+        to_row, _ = to_pos
+        if moving_piece.side == "red":
             score += (9 - to_row) * 5
-        elif side == "black" and piece_type == "P":
+        else:
             score += to_row * 5
 
     return score
 
 
-def order_moves(state: GameState, legal_moves: list[Move]) -> list[Move]:
-    reverse = state.turn == "red"
+def order_moves(state: GameState, legal_moves: List[Move]) -> List[Move]:
     return sorted(
         legal_moves,
         key=lambda move: move_ordering_score(state, move),
-        reverse=reverse
+        reverse=True,
     )
 
 
