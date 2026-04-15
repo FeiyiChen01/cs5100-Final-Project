@@ -1,14 +1,32 @@
 from __future__ import annotations
 
 from game_state import GameState
-from move_generator import generate_legal_moves, is_in_check, manhattan, winner
+from move_generator import generate_legal_moves, is_in_check, winner
 
-WIN_SCORE = 100000
-LOSS_SCORE = -100000
+WIN_SCORE = 1_000_000
+LOSS_SCORE = -1_000_000
 DRAW_SCORE = 0
+
+PIECE_VALUES = {
+  "K": 0,  # General/King
+  "A": 40,  # Advisor/Guard
+  "P": 180,  # Soldier/Pawn
+  "C": 300,  # Catapult/Cannon
+  "R": 500,  # Chariot/Rook
+}
+
+
+def manhattan(a: tuple[int, int], b: tuple[int, int]) -> int:
+  """Return Manhattan distance between two positions."""
+  return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
 def evaluate(state: GameState) -> int:
+  """
+  Return a heuristic score from Red's perspective.
+  Larger score, better for red.
+  Smaller score, better for black.
+  """
   result = winner(state)
   if result == "red":
     return WIN_SCORE
@@ -21,65 +39,94 @@ def evaluate(state: GameState) -> int:
 
   black_king = state.find_piece("black", "K")
   red_king = state.find_piece("red", "K")
-  red_rook = state.find_piece("red", "R")
-  red_pawn = state.find_piece("red", "P")
 
-  # Base material values
-  if red_rook is not None:
-    score += 500
-  if red_pawn is not None:
-    score += 120
+  # Material balance
+  for pos, piece in state.all_pieces():
+    value = PIECE_VALUES[piece.kind]
+    if piece.side == "red":
+      score += value
+    else:
+      score -= value
 
-  black_state = GameState(state.board, "black")
-  black_moves = generate_legal_moves(black_state, "black")
-  score -= 15 * len(black_moves)
+  # Mobility
+  red_moves = generate_legal_moves(state, "red")
+  black_moves = generate_legal_moves(state, "black")
+  score += 10 * (len(red_moves) - len(black_moves))
 
-  red_state = GameState(state.board, "red")
-  red_moves = generate_legal_moves(red_state, "red")
-  score += 3 * len(red_moves)
+  # Check status
+  if is_in_check(state, "black"):
+    score += 220
+  if is_in_check(state, "red"):
+    score -= 320
 
-  # Bonus if black king is currently in check
-  if is_in_check(black_state, "black"):
-    score += 80
-
-  # Rook pressure: rook on same row or column as black king
-  if red_rook is not None and black_king is not None:
-    rr, rc = red_rook
-    br, bc = black_king
-
-    if rr == br or rc == bc:
-      score += 40
-
-    # Encourage rook to get closer to black king
-    rook_distance = manhattan(red_rook, black_king)
-    score += max(0, 14 - rook_distance)
-
-  # Pawn pressure: encourage pawn to approach black king
-  if red_pawn is not None and black_king is not None:
-    pawn_distance = manhattan(red_pawn, black_king)
-    score += max(0, 20 - 2 * pawn_distance)
-
-    # Extra value if pawn has crossed the river
-    pr, _ = red_pawn
-    if pr <= 4:
-      score += 40
-
-  if red_king is not None and black_king is not None:
-    king_distance = manhattan(red_king, black_king)
-    if 2 <= king_distance <= 5:
-      score += 20
-    elif king_distance > 5:
-      score -= 10
-
-  # Bonus for confining black king toward palace corners or edges
+  # Pressure on the black king
   if black_king is not None:
-    br, bc = black_king
+    for pos, piece in state.all_pieces():
+      if piece.side != "red":
+        continue
 
-    # In this simplified endgame, black king is strongest when mobile.
-    # Encourage states where the king is pushed toward corner-like areas.
-    if (br, bc) in {(0, 3), (0, 5), (2, 3), (2, 5)}:
-      score += 25
-    elif bc == 4:
-      score -= 10
+      distance = manhattan(pos, black_king)
+
+      if piece.kind == "R":
+        # Rook pressure matters a lot
+        score += max(0, 16 - 2 * distance)
+
+        # Same file or row pressure
+        if pos[0] == black_king[0]:
+          score += 40
+        if pos[1] == black_king[1]:
+          score += 40
+
+      elif piece.kind == "C":
+        score += max(0, 12 - distance)
+
+        if pos[0] == black_king[0]:
+          score += 20
+        if pos[1] == black_king[1]:
+          score += 20
+
+      elif piece.kind == "K":
+        score += max(0, 8 - distance)
+
+  if red_king is not None:
+    for pos, piece in state.all_pieces():
+      if piece.side == "black" and piece.kind == "P":
+        distance = manhattan(pos, red_king)
+
+        score -= max(0, 140 - 25 * distance)
+
+        if pos == (4, 9):
+          score -= 400
+        elif pos == (4, 8):
+          score -= 220
+        elif pos == (4, 10):
+          score -= 600
+
+  if black_king is not None:
+    black_king_moves = 0
+    for move in black_moves:
+      source, _ = move
+      piece = state.piece_at(source)
+      if piece is not None and piece.side == "black" and piece.kind == "K":
+        black_king_moves += 1
+    score += 35 * (4 - black_king_moves)
+
+  if red_king is not None:
+    red_king_moves = 0
+    for move in red_moves:
+      source, _ = move
+      piece = state.piece_at(source)
+      if piece is not None and piece.side == "red" and piece.kind == "K":
+        red_king_moves += 1
+    score -= 45 * (4 - red_king_moves)
+
+  # Reward states where red attacks and black is cramped
+  if len(black_moves) <= 2:
+    score += 120
+  if len(red_moves) <= 2:
+    score -= 120
+
+  # preference for faster wins or slower losses
+  score -= 2 * state.full_turn_count
 
   return score

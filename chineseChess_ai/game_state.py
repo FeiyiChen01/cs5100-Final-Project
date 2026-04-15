@@ -1,90 +1,103 @@
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
-Position = Tuple[int, int]  # (row, col)
+from dataclasses import dataclass
+from typing import Dict, Iterable, Optional, Tuple
+
+Position = Tuple[int, int]
 Move = Tuple[Position, Position]
+
+BLACK_PALACE_X = range(4, 7)
+BLACK_PALACE_Y = range(1, 4)
+RED_PALACE_X = range(4, 7)
+RED_PALACE_Y = range(8, 11)
+
+PIECE_NAMES = {
+  ("black", "K"): "General",
+  ("black", "A"): "Advisor",
+  ("black", "P"): "Soldier",
+  ("red", "K"): "King",
+  ("red", "C"): "Cannon",
+  ("red", "R"): "Rook",
+}
+
+PIECE_SHORT_NAMES = {
+  ("black", "K"): "GE",
+  ("black", "A"): "AD",
+  ("black", "P"): "SO",
+  ("red", "K"): "KI",
+  ("red", "C"): "CN",
+  ("red", "R"): "RO",
+}
 
 
 @dataclass(frozen=True)
 class Piece:
   side: str  # red or black
-  kind: str  # K (king), R (rook), P (pawn)
+  kind: str  # K, A, P, C, R
 
-  def symbol(self) -> str:
-    ###Return a short display symbol for the piece.
-    mapping = {
-      ("red", "K"): "RK",
-      ("red", "R"): "RR",
-      ("red", "P"): "RP",
-      ("black", "K"): "BK",
-    }
-    return mapping[(self.side, self.kind)]
+  @property
+  def name(self) -> str:
+    return PIECE_NAMES[(self.side, self.kind)]
+
+  @property
+  def short_name(self) -> str:
+    return PIECE_SHORT_NAMES[(self.side, self.kind)]
 
 
 @dataclass(frozen=True)
 class GameState:
-  ### Pieces: Red: King, Rook, Pawn Black: King
-
-  board: Tuple[Tuple[Optional[Piece], ...], ...]
-  turn: str  # "red" or "black"
-
-  @staticmethod
-  def initial() -> "GameState":
-    ### Create a default starting position.
-
-    grid = [[None for _ in range(9)] for _ in range(10)]
-
-    # Black king
-    grid[1][4] = Piece("black", "K")
-
-    # Red pieces
-    grid[9][4] = Piece("red", "K")
-    grid[7][0] = Piece("red", "R")
-    grid[6][4] = Piece("red", "P")
-
-    return GameState(
-        board=tuple(tuple(row) for row in grid),
-        turn="red",
-    )
+  pieces: Dict[Position, Piece]
+  turn: str
+  full_turn_count: int = 1
 
   def piece_at(self, pos: Position) -> Optional[Piece]:
-    ###Return the piece at the given board position.
-    row, col = pos
-    return self.board[row][col]
+    return self.pieces.get(pos)
+
+  def all_pieces(self) -> Iterable[Tuple[Position, Piece]]:
+    return self.pieces.items()
+
+  def pieces_of_side(self, side: str) -> Dict[Position, Piece]:
+    return {pos: piece for pos, piece in self.pieces.items() if
+            piece.side == side}
 
   def find_piece(self, side: str, kind: str) -> Optional[Position]:
-    ###Find and return the position of a specific piece.
-    for r in range(10):
-      for c in range(9):
-        piece = self.board[r][c]
-        if piece is not None and piece.side == side and piece.kind == kind:
-          return (r, c)
+    for pos, piece in self.pieces.items():
+      if piece.side == side and piece.kind == kind:
+        return pos
     return None
 
-  def all_pieces(self, side: str) -> List[Tuple[Position, Piece]]:
-    ###Return all pieces for the given side.
-    result: List[Tuple[Position, Piece]] = []
-    for r in range(10):
-      for c in range(9):
-        piece = self.board[r][c]
-        if piece is not None and piece.side == side:
-          result.append(((r, c), piece))
-    return result
+  def positions_of_kind(self, side: str, kind: str) -> Tuple[Position, ...]:
+    return tuple(
+        pos for pos, piece in self.pieces.items() if
+        piece.side == side and piece.kind == kind
+    )
 
   def move_piece(self, move: Move) -> "GameState":
-    ###Return a new game state after applying the given move.
-    (r1, c1), (r2, c2) = move
-    piece = self.board[r1][c1]
+    """Return a new state after applying a legal move."""
+    source, target = move
+    piece = self.piece_at(source)
     if piece is None:
-      raise ValueError("No piece at the source square.")
+      raise ValueError(f"There is no piece at {source}.")
 
-    new_grid = [list(row) for row in self.board]
-    new_grid[r2][c2] = piece
-    new_grid[r1][c1] = None
+    new_pieces = dict(self.pieces)
+    new_pieces.pop(source)
+    new_pieces[target] = piece
 
     next_turn = "black" if self.turn == "red" else "red"
-    return GameState(
-        board=tuple(tuple(row) for row in new_grid),
-        turn=next_turn,
-    )
+    next_full_turn = self.full_turn_count + (1 if next_turn == "red" else 0)
+    return GameState(new_pieces, next_turn, next_full_turn)
+
+
+def in_bounds(pos: Position) -> bool:
+  x, y = pos
+  return 1 <= x <= 9 and 1 <= y <= 10
+
+
+def in_black_palace(pos: Position) -> bool:
+  x, y = pos
+  return x in BLACK_PALACE_X and y in BLACK_PALACE_Y
+
+
+def in_red_palace(pos: Position) -> bool:
+  x, y = pos
+  return x in RED_PALACE_X and y in RED_PALACE_Y
