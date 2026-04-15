@@ -65,7 +65,6 @@ def minimax(
     alpha: int,
     beta: int,
 ) -> Tuple[int, Optional[Move]]:
-
   result = winner(state)
   if depth == 0 or result is not None:
     return evaluate(state), None

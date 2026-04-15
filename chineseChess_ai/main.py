@@ -44,12 +44,12 @@ def parse_player_input(text: str) -> Tuple[str, Position]:
 
 def piece_name_to_kind(piece_name: str) -> str:
   mapping = {
-      "King": "K",
-      "Cannon": "C",
-      "Rook": "R",
-      "General": "K",
-      "Advisor": "A",
-      "Soldier": "P",
+    "King": "K",
+    "Cannon": "C",
+    "Rook": "R",
+    "General": "K",
+    "Advisor": "A",
+    "Soldier": "P",
   }
   if piece_name not in mapping:
     raise ValueError(f"Unsupported piece name: {piece_name}")
@@ -60,12 +60,12 @@ def piece_display_name(piece) -> str:
   if piece is None:
     return "?"
   mapping = {
-      ("black", "K"): "General",
-      ("black", "A"): "Advisor",
-      ("black", "P"): "Soldier",
-      ("red", "K"): "King",
-      ("red", "C"): "Cannon",
-      ("red", "R"): "Rook",
+    ("black", "K"): "General",
+    ("black", "A"): "Advisor",
+    ("black", "P"): "Soldier",
+    ("red", "K"): "King",
+    ("red", "C"): "Cannon",
+    ("red", "R"): "Rook",
   }
   return mapping.get((piece.side, piece.kind), piece.kind)
 
@@ -108,8 +108,8 @@ def find_player_move_by_target(
 ) -> Move:
   candidate_moves = legal_moves_for_named_red_piece(state, piece_name)
   matching = [
-      candidate_move for candidate_move in candidate_moves
-      if candidate_move[1] == target
+    candidate_move for candidate_move in candidate_moves
+    if candidate_move[1] == target
   ]
 
   if not matching:

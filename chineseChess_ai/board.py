@@ -69,7 +69,7 @@ def render_board(state: GameState) -> str:
 
   lines.append("   " + "─" * board_width)
   lines.append(
-    "Current turn: " + ("Red" if state.turn == "red" else "Black"))
+      "Current turn: " + ("Red" if state.turn == "red" else "Black"))
   lines.append("Input examples: rook(7,1) cannon(5,3) ")
   return "\n".join(lines)
 
@@ -90,4 +90,4 @@ def render_piece_summary(state: GameState) -> str:
       red_parts.append(label)
 
   return "Black: " + ", ".join(black_parts) + "\n" + "Red: " + ", ".join(
-    red_parts)
+      red_parts)

@@ -68,7 +68,7 @@ def generals_facing(state: GameState) -> bool:
 
 
 def generate_general_moves(state: GameState, pos: Position, piece: Piece) -> \
-List[Move]:
+    List[Move]:
   """General and king stay inside palace, move one step orthogonally"""
   moves: List[Move] = []
   x, y = pos
@@ -87,7 +87,7 @@ List[Move]:
 
 
 def generate_advisor_moves(state: GameState, pos: Position, piece: Piece) -> \
-List[Move]:
+    List[Move]:
   """Advisor stay inside palace, move one step diagonally"""
   moves: List[Move] = []
   x, y = pos
@@ -105,8 +105,9 @@ List[Move]:
   return moves
 
 
-def generate_black_soldier_moves(state: GameState, pos: Position, piece: Piece) -> \
-List[Move]:
+def generate_black_soldier_moves(state: GameState, pos: Position,
+    piece: Piece) -> \
+    List[Move]:
   """Soldier one step up, left, right, cannot move backward"""
   moves: List[Move] = []
   x, y = pos
@@ -123,7 +124,7 @@ List[Move]:
 
 
 def generate_red_pawn_moves(state: GameState, pos: Position, piece: Piece) -> \
-List[Move]:
+    List[Move]:
   """ red pawn would move one step down, left, right."""
   moves: List[Move] = []
   x, y = pos
@@ -166,7 +167,7 @@ def generate_rook_moves(state: GameState, pos: Position, piece: Piece) -> List[
 
 
 def generate_cannon_moves(state: GameState, pos: Position, piece: Piece) -> \
-List[Move]:
+    List[Move]:
   """ Cannon moves any number of squares orthogonally,
   non-capturing move: path must be clear, destination empty,
   capturing move: there must be exactly one piece between start and target """
